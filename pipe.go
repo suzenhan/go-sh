@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"io"
 	"os"
 	"strings"
 	"syscall"
@@ -37,8 +36,8 @@ func (s *Session) UnmarshalXML(data interface{}) (err error) {
 // start command
 func (s *Session) Start() (err error) {
 	s.started = true
-	var rd *io.PipeReader
-	var wr *io.PipeWriter
+	var rd *os.File
+	var wr *os.File
 	var length = len(s.cmds)
 	if s.ShowCMD {
 		var cmds = make([]string, 0, 4)
@@ -54,7 +53,10 @@ func (s *Session) Start() (err error) {
 			cmd.Stdin = rd
 		}
 		if index != length {
-			rd, wr = io.Pipe() // create pipe
+			rd, wr, err = os.Pipe() // create pipe
+			if err != nil {
+				return err
+			}
 			cmd.Stdout = wr
 			if s.PipeStdErrors {
 				cmd.Stderr = s.Stderr
@@ -82,7 +84,7 @@ func (s *Session) Wait() error {
 		if lastErr = cmd.Wait(); lastErr != nil {
 			pipeErr = lastErr
 		}
-		wr, ok := cmd.Stdout.(*io.PipeWriter)
+		wr, ok := cmd.Stdout.(*os.File)
 		if ok {
 			wr.Close()
 		}
