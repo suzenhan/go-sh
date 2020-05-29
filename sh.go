@@ -34,6 +34,7 @@ import (
 	"os/exec"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/codegangsta/inject"
@@ -57,6 +58,8 @@ type Session struct {
 	// additional pipe options
 	PipeFail      bool // returns error of rightmost no-zero command
 	PipeStdErrors bool // combine std errors of all pipe commands
+
+	SysProcAttr   *syscall.SysProcAttr
 }
 
 func (s *Session) writePrompt(args ...interface{}) {
@@ -198,6 +201,9 @@ func (s *Session) appendCmd(cmd string, args []string, cwd Dir, env map[string]s
 		args = append(v[1:], args...)
 	}
 	c := exec.Command(cmd, args...)
+	if s.SysProcAttr != nil {
+		c.SysProcAttr = s.SysProcAttr
+	}
 	c.Env = environ
 	c.Dir = string(cwd)
 	s.cmds = append(s.cmds, c)
